@@ -178,8 +178,8 @@
 - (void)closeAndWait:(NSTimeInterval)timeout {
     NSDate *started = [NSDate date];
     self.synchronDisconnect = TRUE;
-    [self closeWithDisconnectHandler:nil];
-    
+    [self closeAndReturnRACSubject];
+
     [[NSRunLoop currentRunLoop] addPort:[NSMachPort port] forMode:NSRunLoopCommonModes];
     
     while (self.synchronDisconnect && (timeout == 0 || started.timeIntervalSince1970 + timeout > [NSDate date].timeIntervalSince1970)) {

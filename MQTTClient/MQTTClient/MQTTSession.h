@@ -27,7 +27,8 @@
 
 @class MQTTSession;
 @class MQTTSSLSecurityPolicy;
-
+@class RACSubject;
+@class RACSignal;
 /**
  Enumeration of MQTTSession states
  */
@@ -271,10 +272,6 @@ typedef NS_ENUM(NSInteger, MQTTSessionError) {
 
 @end
 
-typedef void (^MQTTConnectHandler)(NSError *error);
-typedef void (^MQTTDisconnectHandler)(NSError *error);
-typedef void (^MQTTSubscribeHandler)(NSError *error, NSArray<NSNumber *> *gQoss);
-typedef void (^MQTTUnsubscribeHandler)(NSError *error);
 typedef void (^MQTTPublishHandler)(NSError *error);
 
 /** Session implements the MQTT protocol for your application
@@ -330,18 +327,16 @@ typedef void (^MQTTPublishHandler)(NSError *error);
 */
 @property (strong, nonatomic) id<MQTTPersistence> persistence;
 
-/** block called once when connection is established
+/** RACSubject called once when connection is established
  */
-@property (copy, nonatomic) MQTTConnectHandler connectHandler;
-
+@property (nonatomic, strong, readonly) RACSignal* mqttConnectHandler;
 /** block called when connection is established
  */
-@property (strong) void (^connectionHandler)(MQTTSessionEvent event);
-
+@property (nonatomic,strong,readonly) RACSubject* connectionHandler;
 /** block called when message is received
  */
-@property (strong) void (^messageHandler)(NSData* message, NSString* topic);
-
+//@property (strong) void (^messageHandler)(NSData* message, NSString* topic);
+@property (nonatomic,strong,readonly) RACSubject* messageHandler;
 /** Session status
  */
 @property (nonatomic, readonly) MQTTSessionStatus status;
@@ -522,7 +517,7 @@ typedef void (^MQTTPublishHandler)(NSError *error);
  
  */
 
-- (void)connectWithConnectHandler:(MQTTConnectHandler)connectHandler;
+- (RACSubject*)connectAndReturnRACSubject;
 
 
 /** disconnect gracefully
@@ -554,29 +549,6 @@ typedef void (^MQTTPublishHandler)(NSError *error);
 
 
 
-/** subscribes to a topic at a specific QoS level
- 
- @param topic see subscribeToTopic:atLevel:subscribeHandler: for description
- @param qosLevel  see subscribeToTopic:atLevel:subscribeHandler: for description
- @return the Message Identifier of the SUBSCRIBE message.
- 
- @note returns immediately. To check results, register as an MQTTSessionDelegate and watch for events.
- 
- @code
- #import "MQTTClient.h"
- 
- MQTTSession *session = [[MQTTSession alloc] init];
- ...
- [session connect];
- ...
- [session subscribeToTopic:@"example/#" atLevel:2];
- 
- @endcode
- 
- */
-
-- (UInt16)subscribeToTopic:(NSString *)topic
-                   atLevel:(MQTTQosLevel)qosLevel;
 /** subscribes to a topic at a specific QoS level
  
  @param topic the Topic Filter to subscribe to.
@@ -611,9 +583,8 @@ typedef void (^MQTTPublishHandler)(NSError *error);
  
  */
 
-- (UInt16)subscribeToTopic:(NSString *)topic
-                   atLevel:(MQTTQosLevel)qosLevel
-          subscribeHandler:(MQTTSubscribeHandler)subscribeHandler;
+- (RACSubject*)subscribeToTopic:(NSString *)topic
+                        atLevel:(MQTTQosLevel)qosLevel;
 
 /** subscribes a number of topics
  
@@ -641,7 +612,7 @@ typedef void (^MQTTPublishHandler)(NSError *error);
  */
 
 
-- (UInt16)subscribeToTopics:(NSDictionary<NSString *, NSNumber *> *)topics;
+- (RACSubject*)subscribeToTopics:(NSDictionary<NSString *, NSNumber *> *)topics;
 
 /** subscribes a number of topics
  
@@ -679,8 +650,7 @@ typedef void (^MQTTPublishHandler)(NSError *error);
  */
 
 
-- (UInt16)subscribeToTopics:(NSDictionary<NSString *, NSNumber *> *)topics
-           subscribeHandler:(MQTTSubscribeHandler)subscribeHandler;
+- (RACSubject*)subscribeToTopicsAndRetrunSubject:(NSDictionary<NSString *, NSNumber *> *)topics;
 
 /** unsubscribes from a topic
  
@@ -702,51 +672,7 @@ typedef void (^MQTTPublishHandler)(NSError *error);
  @endcode
  */
 
-- (UInt16)unsubscribeTopic:(NSString *)topic;
-
-/** unsubscribes from a topic
- 
- @param topic the Topic Filter to unsubscribe from.
- @param unsubscribeHandler identifies a block which is executed on successfull or unsuccessfull subscription.
- Might be nil. error is nil in the case of a successful subscription. In this case gQoss represents an
- array of grantes Qos
- 
- @return the Message Identifier of the UNSUBSCRIBE message.
- 
- @note returns immediately.
- 
- */
-
-
-- (UInt16)unsubscribeTopic:(NSString *)topic
-        unsubscribeHandler:(MQTTUnsubscribeHandler)unsubscribeHandler;
-
-/** unsubscribes from a number of topics
- 
- @param topics an NSArray<NSString *> of topics to unsubscribe from
- 
- @return the Message Identifier of the UNSUBSCRIBE message.
- 
- @note returns immediately. To check results, register as an MQTTSessionDelegate and watch for events.
- 
- @code
- #import "MQTTClient.h"
- 
- MQTTSession *session = [[MQTTSession alloc] init];
- ...
- [session connect];
- 
- [session unsubscribeTopics:@[
- @"example/#",
- @"example/status",
- @"other/#"
- ]];
- 
- @endcode
- 
- */
-
-- (UInt16)unsubscribeTopics:(NSArray<NSString *> *)topics;
+- (RACSubject*)unsubscribeTopic:(NSString *)topic;
 
 /** unsubscribes from a number of topics
  
@@ -761,8 +687,7 @@ typedef void (^MQTTPublishHandler)(NSError *error);
  @note returns immediately.
  
  */
-- (UInt16)unsubscribeTopics:(NSArray<NSString *> *)topics
-         unsubscribeHandler:(MQTTUnsubscribeHandler)unsubscribeHandler;
+- (RACSubject*)unsubscribeTopics:(NSArray<NSString *> *)topics;
 
 /** publishes data on a given topic at a specified QoS level and retain flag
  
@@ -790,57 +715,10 @@ typedef void (^MQTTPublishHandler)(NSError *error);
  
  */
 
-- (UInt16)publishData:(NSData *)data
+- (RACSubject*)publishData:(NSData *)data
               onTopic:(NSString *)topic
                retain:(BOOL)retainFlag
                   qos:(MQTTQosLevel)qos;
-
-/** publishes data on a given topic at a specified QoS level and retain flag
- 
- @param data the data to be sent. length may range from 0 to 268,435,455 - 4 - _lengthof-topic_ bytes. Defaults to length 0.
- @param topic the Topic to identify the data
- @param retainFlag if YES, data is stored on the MQTT broker until overwritten by the next publish with retainFlag = YES
- @param qos specifies the Quality of Service for the publish
- qos can be 0, 1, or 2.
- 
- 
- @param publishHandler identifies a block which is executed on successfull or unsuccessfull publsh. Might be nil
- error is nil in the case of a successful connect
- sessionPresent indicates in MQTT 3.1.1 if persistent session data was present at the server
- 
-
- @return the Message Identifier of the PUBLISH message. Zero if qos 0. If qos 1 or 2, zero if message was dropped
- 
- @note returns immediately. To check results, register as an MQTTSessionDelegate and watch for events.
- 
- @code
- #import "MQTTClient.h"
- 
- MQTTSession *session = [[MQTTSession alloc] init];
- ...
- [session connect];
- 
- [session publishData:[@"Sample Data" dataUsingEncoding:NSUTF8StringEncoding]
- topic:@"example/data"
- retain:YES
- qos:1
- publishHandler:^(NSError *error){
- if (error) {
- DDLogVerbose(@"error: %@ %@", error.localizedDescription, payload);
- } else {
- DDLogVerbose(@"delivered:%@", payload);
- delivered++;
- }
- }];
- @endcode
- 
- */
-
-- (UInt16)publishData:(NSData *)data
-              onTopic:(NSString *)topic
-               retain:(BOOL)retainFlag
-                  qos:(MQTTQosLevel)qos
-       publishHandler:(MQTTPublishHandler)publishHandler;
 
 /** closes an MQTTSession gracefully
  
@@ -868,7 +746,7 @@ typedef void (^MQTTPublishHandler)(NSError *error);
  @endcode
  
  */
-- (void)closeWithDisconnectHandler:(MQTTDisconnectHandler)disconnectHandler;
+- (RACSubject*)closeAndReturnRACSubject;
 
 /** close V5
  *  @param returnCode the returncode send to the broker
@@ -877,10 +755,9 @@ typedef void (^MQTTPublishHandler)(NSError *error);
  *  @param userProperty additional dictionary of user key/value combinations
  *  @param disconnectHandler will be called when the disconnect finished
  */
-- (void)closeWithReturnCode:(MQTTReturnCode)returnCode
-      sessionExpiryInterval:(NSNumber *)sessionExpiryInterval
-               reasonString:(NSString *)reasonString
-               userProperty:(NSDictionary <NSString *, NSString *> *)userProperty
-          disconnectHandler:(MQTTDisconnectHandler)disconnectHandler;
+- (RACSubject*)closeWithReturnCode:(MQTTReturnCode)returnCode
+             sessionExpiryInterval:(NSNumber *)sessionExpiryInterval
+                      reasonString:(NSString *)reasonString
+                      userProperty:(NSDictionary <NSString *, NSString *> *)userProperty;
 
 @end

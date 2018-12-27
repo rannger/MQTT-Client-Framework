@@ -15,6 +15,7 @@
 #import "MQTTSSLSecurityPolicy.h"
 
 @class MQTTSessionManager;
+@class RACSubject;
 
 /** delegate gives your application access to received messages
  */
@@ -195,28 +196,27 @@ typedef NS_ENUM(int, MQTTSessionManagerState) {
  * @param connectHandler Called when first connected or if error occurred. It is not called on subsequent internal reconnects.
  */
 
-- (void)connectTo:(NSString *)host
-             port:(NSInteger)port
-              tls:(BOOL)tls
-        keepalive:(NSInteger)keepalive
-            clean:(BOOL)clean
-             auth:(BOOL)auth
-             user:(NSString *)user
-             pass:(NSString *)pass
-             will:(BOOL)will
-        willTopic:(NSString *)willTopic
-          willMsg:(NSData *)willMsg
-          willQos:(MQTTQosLevel)willQos
-   willRetainFlag:(BOOL)willRetainFlag
-     withClientId:(NSString *)clientId
-   securityPolicy:(MQTTSSLSecurityPolicy *)securityPolicy
-     certificates:(NSArray *)certificates
-    protocolLevel:(MQTTProtocolVersion)protocolLevel
-   connectHandler:(MQTTConnectHandler)connectHandler;
+- (RACSubject*)connectTo:(NSString *)host
+                    port:(NSInteger)port
+                     tls:(BOOL)tls
+               keepalive:(NSInteger)keepalive
+                   clean:(BOOL)clean
+                    auth:(BOOL)auth
+                    user:(NSString *)user
+                    pass:(NSString *)pass
+                    will:(BOOL)will
+               willTopic:(NSString *)willTopic
+                 willMsg:(NSData *)willMsg
+                 willQos:(MQTTQosLevel)willQos
+          willRetainFlag:(BOOL)willRetainFlag
+            withClientId:(NSString *)clientId
+          securityPolicy:(MQTTSSLSecurityPolicy *)securityPolicy
+            certificates:(NSArray *)certificates
+           protocolLevel:(MQTTProtocolVersion)protocolLevel;
 
 /** Re-Connects to the MQTT broker using the parameters for given in the connectTo method
  */
-- (void)connectToLast:(MQTTConnectHandler)connectHandler;
+- (RACSubject*)connectToLastAndReturnRACSubject;
 
 /** publishes data on a given topic at a specified QoS level and retain flag
 
@@ -232,6 +232,6 @@ typedef NS_ENUM(int, MQTTSessionManagerState) {
 
 /** Disconnects gracefully from the MQTT broker
  */
-- (void)disconnectWithDisconnectHandler:(MQTTDisconnectHandler)disconnectHandler;
+- (RACSubject*)disconnectAndReturnRACSubject;
 
 @end

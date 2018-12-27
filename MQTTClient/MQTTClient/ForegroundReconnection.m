@@ -51,7 +51,7 @@
 }
 
 - (void)appWillResignActive {
-    [self.sessionManager disconnectWithDisconnectHandler:nil];
+    [self.sessionManager disconnectAndReturnRACSubject];
 }
 
 - (void)appDidEnterBackground {
@@ -68,7 +68,7 @@
 }
 
 - (void)appDidBecomeActive {
-    [self.sessionManager connectToLast:nil];
+    [self.sessionManager connectToLastAndReturnRACSubject];
 }
 
 - (void)endBackgroundTask {
